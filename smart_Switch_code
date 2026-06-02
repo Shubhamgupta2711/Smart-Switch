@@ -1,0 +1,153 @@
+#include <DS3231.h>
+#include <Dusk2Dawn.h>
+
+// Initialize RTC (Hardware I2C: A4=SDA, A5=SCL on Uno/Nano)
+DS3231 rtc(SDA, SCL);
+
+//  Correct Howrah/Kolkata coordinates + IST offset as 5.5 (NOT 5)
+//           Using 5.5 directly handles the 30-min fractional component — no += 30 needed
+Dusk2Dawn localArea(22.57, 88.36, 5.5);
+
+// --- PIN DEFINITIONS ---
+const int Relay1 = 2; // Floor Light (Automatic: Sunset to Sunrise, crosses midnight)
+const int Relay2 = 3; // Fixed Timer 2
+const int Relay3 = 4; // Fixed Timer 3
+const int Relay4 = 5; // Fixed Timer 4
+
+// --- FIXED TIMERS (Relays 2, 3, 4) ---
+// Relay 2: Daytime window — 08:00 AM to 04:00 PM (same day → AND logic)
+const int Ontime2  = (8  * 60) + 0;
+const int Offtime2 = (16 * 60) + 0;
+
+// Relay 3: Evening window — 06:30 PM to 10:30 PM (same day → AND logic)
+const int Ontime3  = (18 * 60) + 30;
+const int Offtime3 = (22 * 60) + 30;
+
+// Relay 4: Overnight window — 11:00 PM to 05:00 AM (crosses midnight → OR logic)
+const int Ontime4  = (23 * 60) + 0;
+const int Offtime4 = (5  * 60) + 0;
+
+// --- HELPER: Print minutes-from-midnight as HH:MM ---
+void printTime(int totalMin) {
+  int h = totalMin / 60;
+  int m = totalMin % 60;
+  if (h < 10) Serial.print("0");
+  Serial.print(h);
+  Serial.print(":");
+  if (m < 10) Serial.print("0");
+  Serial.print(m);
+}
+
+void setup() {
+  Serial.begin(9600);
+  rtc.begin();
+
+  pinMode(Relay1, OUTPUT);
+  pinMode(Relay2, OUTPUT);
+  pinMode(Relay3, OUTPUT);
+  pinMode(Relay4, OUTPUT);
+
+  /* TIME SYNC:
+   * Uncomment the line below, set current time, upload once.
+   * Then comment it out again and re-upload to prevent time reset on every boot.
+   */
+  // Change this to today's actual date and time:
+ // rtc.setTime(13, 0, 0);          // HH, MM, SS
+ //rtc.setDate(01, 6, 2026);       // DD, MM, YYYY 
+  // rtc.setTime(18, 15, 0); // Format: (hours, minutes, seconds) — 24HR
+}
+
+void loop() {
+
+  // 1. Read current time from RTC
+  Time t = rtc.getTime();
+  int totalMin = (t.hour * 60) + t.min;
+
+  // Get year dynamically from RTC (no hardcoding — works every year)
+  int currentYear = t.year;
+
+  // 2. Calculate today's sunrise & sunset in IST (5.5 offset handles it correctly)
+  int sunsetMin  = localArea.sunset(currentYear, t.mon, t.date, false);
+  int sunriseMin = localArea.sunrise(currentYear, t.mon, t.date, false);
+
+  // 3. Relay 1 operational window: ON 15 min before sunset, OFF 15 min after sunrise
+  int Ontime1  = sunsetMin  - 15;
+  int Offtime1 = sunriseMin + 15;
+//  int sunsetMin  = localArea.sunset(currentYear, t.mon, t.date, false);
+  //int sunriseMin = localArea.sunrise(currentYear, t.mon, t.date, false);
+
+// --- TEMPORARY DEBUG --- To check current date and Time in your RTC module
+  Serial.print("DEBUG Year: "); Serial.println(currentYear);
+  Serial.print("DEBUG Month: "); Serial.println(t.mon);
+  Serial.print("DEBUG Date: "); Serial.println(t.date);
+  Serial.print("DEBUG Raw sunsetMin: "); Serial.println(sunsetMin);
+  Serial.print("DEBUG Raw sunriseMin: "); Serial.println(sunriseMin);
+// --- END DEBUG ---
+  // --- SERIAL MONITOR OUTPUT ---
+  Serial.println("-----------------------------------------------------------------");
+
+  Serial.print("Current Time : ");
+  Serial.print(rtc.getTimeStr());
+  Serial.print(" ("); Serial.print(totalMin); Serial.println(" min)");
+
+  // Formatted sunrise/sunset with leading zeros
+  Serial.print("Sunset       : "); printTime(sunsetMin);
+  Serial.print("  |  Sunrise: "); printTime(sunriseMin);
+  Serial.println();
+
+  Serial.print("Floor Light  : ON @ "); printTime(Ontime1);
+  Serial.print("  |  OFF @ ");         printTime(Offtime1);
+  Serial.println("  (24HR)");
+
+  Serial.println();
+
+  // ----------------------------------------------------
+  // RELAY 1: Crosses midnight → OR logic
+  // ON from ~sunset-15min, OFF until ~sunrise+15min
+  // ----------------------------------------------------
+  if (totalMin >= Ontime1 || totalMin < Offtime1) {
+    digitalWrite(Relay1, HIGH);
+    Serial.print("R1 (Floor): ON  | ");
+  } else {
+    digitalWrite(Relay1, LOW);
+    Serial.print("R1 (Floor): OFF | ");
+  }
+
+  // ----------------------------------------------------
+  // RELAY 2: Same-day window → AND logic
+  // ----------------------------------------------------
+  if (totalMin >= Ontime2 && totalMin < Offtime2) {
+    digitalWrite(Relay2, HIGH);
+    Serial.print("R2: ON  | ");
+  } else {
+    digitalWrite(Relay2, LOW);
+    Serial.print("R2: OFF | ");
+  }
+
+  // ----------------------------------------------------
+  // RELAY 3: Same-day window → AND logic
+  // ----------------------------------------------------
+  if (totalMin >= Ontime3 && totalMin < Offtime3) {
+    digitalWrite(Relay3, HIGH);
+    Serial.print("R3: ON  | ");
+  } else {
+    digitalWrite(Relay3, LOW);
+    Serial.print("R3: OFF | ");
+  }
+
+  // ----------------------------------------------------
+  // RELAY 4: Crosses midnight → OR logic
+  // ----------------------------------------------------
+  if (totalMin >= Ontime4 || totalMin < Offtime4) {
+    digitalWrite(Relay4, HIGH);
+    Serial.println("R4: ON");
+  } else {
+    digitalWrite(Relay4, LOW);
+    Serial.println("R4: OFF");
+  }
+
+  Serial.println("-----------------------------------------------------------------");
+
+  // Poll every 30 seconds
+  delay(30000);
+}
