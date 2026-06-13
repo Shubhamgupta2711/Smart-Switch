@@ -4,7 +4,7 @@ This project is an intelligent, micro-controller-based electrical switch system 
 By installing this system you automate all Light also it save energy and time.
 
 ### 2. System Features
-#### • Dusk-to-Dawn Library: 
+#### • [Dusk-to-Dawn Library:](https://www.arduinolibraries.info/libraries/dusk2-dawn) 
 Automates  dynamically using geographic coordinates (Latitude/Longitude) to match solar shifts across summer and winter cycles.
 ##### •	Non-volatile Timekeeping:
 Driven by an I2C-connected DS3231 Real-Time Clock (RTC) chip equipped with an independent coin-cell backup battery, ensuring zero time loss during power grid failures.
@@ -14,30 +14,40 @@ Component Inventory
 1.	Micro-controller: Arduino Uno, Nano, or Pro Micro (ATmega328P or compatible)
 2.	RTC Module: DS3231 Real-Time Clock
 3.	Relay: 5V  Relay module
-4.	Power Supply: 5V DC 
-Hardware Connections
+4.	Power Supply: 5V DC
 
-### Component	Module Pin	Arduino Pin
-DS3231 RTC	VCC	5V
-	GND	GND
-	SDA	A4 (SDA)
-	SCL	A5 ( SCL)
-4-Channel Relay Board	VCC	5V
-	GND	GND
-	IN1	D2
-	IN2	D3
-	IN3	D4
-	IN4	D5
+<img width="4080" height="2304" alt="IMG20260519104719" src="https://github.com/user-attachments/assets/b0152013-f8fa-490f-92a4-5f26184b747e" />
 
+
+### Hardware Connections
+
+Component	Module Pin &emsp; - &emsp;	Arduino Pin
+* DS3231 RTC  &emsp; - &emsp;	VCC	5V
+* GND   &emsp; - &emsp;	GND
+* SDA	 &emsp;- &emsp; A4 (SDA)
+* SCL &emsp;- &emsp;	A5 ( SCL)
+
+ 4-Channel Relay Board
+* 	VCC &emsp; - &emsp;	5V
+*	GND &emsp;- &emsp;	GND
+*	IN1 &emsp;- &emsp;	D2
+*	IN2 &emsp;- &emsp;	D3
+*	IN3 &emsp;- &emsp;	D4
+*	IN4 &emsp;- &emsp;	D5
+###<img width="4080" height="2304" alt="Picsart_26-05-19_12-00-39-885" src="https://github.com/user-attachments/assets/cce3f4e3-ec58-479d-8460-791d0b13b489" />
  
 
 ## 4. Software Implementation
 Dependencies
 The codebase requires the installation of the following libraries through the Arduino IDE Library Manager:
-•	<DS3231.h> 
-•	<Dusk2Dawn.h>
-5.	Logical Analysis & Core Calculations
 
+* <DS3231.h>
+*	[<Dusk2Dawn.h>](https://www.arduinolibraries.info/libraries/dusk2-dawn)
+
+## Code
+* [Smart_switch_code](smart_Switch_code)
+
+### 5.	Logical Analysis & Core Calculations
 The code uses a logical OR (||) operator. This means the relay will turn ON if either of the two conditions is true:
  	
 ## Why is it written this way? 
